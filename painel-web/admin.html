@@ -85,8 +85,7 @@
         </div>
 
         <div class="card" id="panelDriver">
-          <div class="cardhead"><h2>Cadastrar/editar motoboy</h2><div class="tools"><button class="gray btn-mini" onclick="togglePanel('panelDriver');return false;"
-onclick="togglePanel('panelNewDelivery');return false;">Minimizar</button></div></div>
+          <div class="cardhead"><h2>Cadastrar/editar motoboy</h2><div class="tools"><button class="gray btn-mini" onclick="togglePanel('panelDriver');return false;">Minimizar</button></div></div>
           <div class="cardbody">
             <div class="alert">Crie o usuário primeiro no Firebase Authentication. Depois cole aqui o UID dele.</div>
           <div class="section">
@@ -99,7 +98,7 @@ onclick="togglePanel('panelNewDelivery');return false;">Minimizar</button></div>
         </div>
 
         <div class="card" id="panelNewDelivery">
-          <div class="cardhead"><h2>Novo pedido/rota</h2><div class="tools"><button class="gray btn-mini" onclick="togglePanel(\'panelNewDelivery\');return false;">Minimizar</button></div></div>
+          <div class="cardhead"><h2>Novo pedido/rota</h2><div class="tools"><button class="gray btn-mini" onclick="togglePanel('panelNewDelivery');return false;">Minimizar</button></div></div>
           <div class="cardbody">
             <div class="grid">
             <input id="delCode" placeholder="Pedido nº" />
@@ -430,7 +429,7 @@ onclick="togglePanel('panelNewDelivery');return false;">Minimizar</button></div>
     function timeAgo(ms){
       if(!ms) return '-'; const s=Math.floor((Date.now()-ms)/1000); if(s<60) return `${s}s atrás`; const m=Math.floor(s/60); if(m<60) return `${m}min atrás`; return `${Math.floor(m/60)}h atrás`;
     }
-    function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\'':'&#39;','"':'&quot;'}[c]))}
+    function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',''':'&#39;','"':'&quot;'}[c]))}
   
 </script>
 </body>
