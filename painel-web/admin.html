@@ -1,520 +1,317 @@
+
 <!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Pizzalog • Painel Admin</title>
-
-  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://unpkg.com" crossorigin>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin />
-
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Painel Pizzaria GPS</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   <style>
     :root{
-      --bg:#0b1220;
-      --card:#0f1a2f;
-      --card2:#0b1630;
-      --line:#22314d;
-      --text:#e5e7eb;
-      --muted:#9ca3af;
-      --ok:#22c55e;
-      --warn:#f59e0b;
-      --bad:#ef4444;
-      --blue:#60a5fa;
-      --radius:18px;
-      --shadow: 0 16px 42px rgba(0,0,0,.22);
+      --bg:#0f172a;--card:#111827;--card2:#1f2937;--text:#f9fafb;--muted:#9ca3af;
+      --ok:#16a34a;--warn:#f59e0b;--danger:#dc2626;--blue:#2563eb;--line:#374151;
     }
-    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    html,body{height:100%}
-    body{
-      margin:0;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
-      background: radial-gradient(1200px 600px at 20% -10%, rgba(96,165,250,.20), transparent 55%),
-                  radial-gradient(900px 500px at 90% 0%, rgba(34,197,94,.14), transparent 55%),
-                  var(--bg);
-      color:var(--text);
-    }
-    header{
-      position:sticky; top:0; z-index:50;
-      padding:12px 14px;
-      background:rgba(11,18,32,.86);
-      backdrop-filter: blur(10px);
-      border-bottom:1px solid rgba(255,255,255,.07);
-      display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
-    }
-    .brand{display:flex; flex-direction:column; gap:2px}
-    .brand h1{margin:0;font-size:16px;font-weight:900;letter-spacing:.02em}
-    .brand p{margin:0;color:var(--muted);font-size:12px}
-    .top-actions{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
-    .chip{
-      display:inline-flex; align-items:center; gap:8px;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(255,255,255,.06);
-      border-radius:999px;
-      padding:8px 10px;
-      font-size:12px;
-      font-weight:900;
-      color:#dbeafe;
-    }
-    .dot{width:10px;height:10px;border-radius:999px;background:#64748b}
-    .dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)}
-    .btn{
-      border:0; border-radius:12px;
-      padding:10px 12px;
-      font-weight:900;
-      cursor:pointer;
-      color:#0b1220;
-      background:var(--blue);
-      box-shadow: 0 10px 24px rgba(96,165,250,.18);
-    }
-    .btn.secondary{
-      color:var(--text);
-      background:rgba(255,255,255,.08);
-      border:1px solid rgba(255,255,255,.10);
-      box-shadow:none;
-    }
-    .btn.danger{
-      background:rgba(239,68,68,.18);
-      border:1px solid rgba(239,68,68,.30);
-      color:#fecaca;
-      box-shadow:none;
-    }
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    header{position:sticky;top:0;z-index:10;background:rgba(15,23,42,.96);border-bottom:1px solid var(--line);padding:14px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    h1{font-size:20px;margin:0}.sub{color:var(--muted);font-size:12px;margin-top:4px}.wrap{padding:14px;display:grid;grid-template-columns:1.2fr .8fr;gap:14px}
+    @media(max-width:900px){.wrap{grid-template-columns:1fr}.map{height:420px}}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:0 10px 22px rgba(0,0,0,.18)}
+    .card h2{margin:0 0 12px;font-size:17px}.row{display:flex;gap:8px;flex-wrap:wrap}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}@media(max-width:600px){.grid{grid-template-columns:1fr}}
+    input,select,textarea{width:100%;border:1px solid var(--line);background:var(--card2);color:var(--text);border-radius:12px;padding:11px;font-size:14px;outline:none} textarea{min-height:70px;resize:vertical}
+    button{border:0;border-radius:12px;padding:11px 13px;font-weight:700;color:#fff;background:var(--blue);cursor:pointer}button.danger{background:var(--danger)}button.ok{background:var(--ok)}button.warn{background:var(--warn);color:#111827}button.gray{background:#4b5563}
+    .map{height:620px;border-radius:18px;overflow:hidden;border:1px solid var(--line)}
+    .cardhead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .cardhead .tools{display:flex;gap:8px;flex-wrap:wrap}
+    .btn-mini{padding:8px 10px;border-radius:10px;font-size:12px;font-weight:800}
+    .collapsed .cardbody{display:none}
+    .mt{margin-top:10px}
 
-    .layout{
-      display:grid;
-      grid-template-columns: 420px 1fr;
-      gap:14px;
-      padding:14px;
-      min-height: calc(100vh - 64px);
-    }
-    @media(max-width: 980px){ .layout{grid-template-columns:1fr;padding:12px;} }
-
-    .card{
-      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-      border:1px solid rgba(255,255,255,.10);
-      border-radius:var(--radius);
-      box-shadow: var(--shadow);
-      overflow:hidden;
-    }
-    .card .head{
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      padding:12px 12px;
-      border-bottom:1px solid rgba(255,255,255,.08);
-    }
-    .card .head b{font-size:13px; letter-spacing:.02em}
-    .card .body{padding:12px}
-    .muted{color:var(--muted); font-size:12px; line-height:1.45}
-
-    .login{
-      max-width: 520px;
-      margin: 18px auto 0;
-    }
-    .grid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-    @media(max-width:520px){ .grid{grid-template-columns:1fr} }
-
-    input, textarea, select{
-      width:100%;
-      padding:12px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(11,22,48,.55);
-      color:var(--text);
-      outline:none;
-      font-weight:800;
-      font-size:16px; /* evita zoom iOS */
-    }
-    textarea{min-height:70px;resize:vertical}
-    input:focus, textarea:focus, select:focus{border-color:rgba(96,165,250,.55); box-shadow:0 0 0 4px rgba(96,165,250,.12)}
-    .msg{margin-top:10px; font-size:12px; color:var(--muted); font-weight:800}
-    .msg.err{color:#fca5a5}
-    .msg.ok{color:#86efac}
-
-    #map{
-      height: calc(100vh - 64px - 28px);
-      min-height: 520px;
-    }
-    @media(max-width:980px){
-      #map{height:55vh; min-height: 360px;}
-    }
-
-    .list{display:grid; gap:10px}
-    .item{
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(11,22,48,.45);
-      border-radius:16px;
-      padding:12px;
-    }
-    .item-top{display:flex; justify-content:space-between; gap:10px; align-items:flex-start}
-    .name{font-weight:900}
-    .badge{
-      display:inline-flex; align-items:center; gap:7px;
-      padding:6px 10px;
-      border-radius:999px;
-      font-size:12px;
-      font-weight:900;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.06);
-      color:#e5e7eb;
-      white-space:nowrap;
-    }
-    .badge.ok{border-color:rgba(34,197,94,.30); background:rgba(34,197,94,.12); color:#86efac}
-    .badge.bad{border-color:rgba(239,68,68,.30); background:rgba(239,68,68,.12); color:#fecaca}
-    .badge.warn{border-color:rgba(245,158,11,.35); background:rgba(245,158,11,.14); color:#fde68a}
-
-    .section{display:grid; gap:10px}
-    .row{display:flex; gap:10px; flex-wrap:wrap}
-    .row > *{flex:1; min-width: 160px}
-    .btn-mini{padding:8px 10px;border-radius:10px;font-size:12px;font-weight:900}
-    .collapsed{display:none}
-    .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
-    .footer{padding:10px 14px 16px;color:var(--muted);text-align:center;font-size:12px;font-weight:900}
+    .list{display:grid;gap:10px}.item{background:var(--card2);border:1px solid var(--line);border-radius:15px;padding:12px}.item-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.name{font-weight:800}.small{font-size:12px;color:var(--muted);line-height:1.45}.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:800}.b-ok{background:rgba(22,163,74,.18);color:#86efac}.b-warn{background:rgba(245,158,11,.18);color:#fcd34d}.b-danger{background:rgba(220,38,38,.18);color:#fca5a5}.b-blue{background:rgba(37,99,235,.18);color:#93c5fd}
+    .login{max-width:460px;margin:38px auto}.hidden{display:none!important}.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}@media(max-width:800px){.kpi{grid-template-columns:repeat(2,1fr)}}.kpi .card{padding:12px}.kpi b{font-size:24px}.kpi span{display:block;color:var(--muted);font-size:12px;margin-top:3px}.footer{text-align:center;color:var(--muted);font-size:12px;padding:18px}.alert{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.45);padding:10px;border-radius:14px;color:#fde68a;margin-bottom:10px}.dangerText{color:#fca5a5}.okText{color:#86efac}.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}.section{display:grid;gap:14px}.mt{margin-top:12px}
   </style>
 </head>
 <body>
-
-<header>
-  <div class="brand">
-    <h1 id="title">Pizzalog • Painel Admin</h1>
-    <p id="subtitle">GPS em tempo real</p>
+  <div id="loginBox" class="login card">
+    <h1>Painel Pizzaria GPS</h1>
+    <p class="sub">Entre com o e-mail do gestor cadastrado no Firebase Auth.</p>
+    <div class="section">
+      <input id="loginEmail" type="email" placeholder="E-mail do gestor" />
+      <input id="loginPass" type="password" placeholder="Senha" />
+      <button id="btnLogin">Entrar</button>
+      <div id="loginMsg" class="small"></div>
+    </div>
   </div>
 
-  <div class="top-actions">
-    <span class="chip"><span class="dot" id="dotAuth"></span>Auth</span>
-    <span class="chip"><span class="dot" id="dotDB"></span>DB</span>
-    <button class="btn secondary" id="btnRefresh" type="button">Atualizar</button>
-    <button class="btn danger" id="btnLogout" type="button">Sair</button>
-  </div>
-</header>
-
-<div id="loginBox" class="card login">
-  <div class="head">
-    <b>Login do gestor</b>
-    <span class="chip" style="margin-left:auto"><span class="dot warn"></span>deslogado</span>
-  </div>
-  <div class="body">
-    <div class="grid">
+  <div id="app" class="hidden">
+    <header>
       <div>
-        <div class="muted" style="margin-bottom:6px;font-weight:900">E-mail</div>
-        <input id="loginEmail" type="email" placeholder="admin@pizzaria.com" autocomplete="username" />
+        <h1 id="titulo">Pizzaria GPS</h1>
+        <div class="sub" id="subtitulo">Monitoramento em tempo real</div>
       </div>
-      <div>
-        <div class="muted" style="margin-bottom:6px;font-weight:900">Senha</div>
-        <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password" />
+      <div class="row">
+        <button class="gray" id="btnRefresh">Atualizar</button>
+        <button class="danger" id="btnLogout">Sair</button>
       </div>
-    </div>
+    </header>
 
-    <div class="row" style="margin-top:12px">
-      <button class="btn" id="btnLogin" type="button">Entrar</button>
-    </div>
+    <main class="wrap">
+      <section>
+        <div class="kpi">
+          <div class="card"><b id="kpiOnline">0</b><span>motoboys online</span></div>
+          <div class="card"><b id="kpiEntrega">0</b><span>em entrega</span></div>
+          <div class="card"><b id="kpiAguardando">0</b><span>pedidos aguardando</span></div>
+          <div class="card"><b id="kpiAlerta">0</b><span>alertas de prazo</span></div>
+        </div>
+        <div class="card">
+          <h2>Mapa dos motoboys</h2>
+          <div id="map" class="map"></div>
+        </div>
+      </section>
 
-    <div id="loginMsg" class="msg">Digite seu e-mail e senha do Firebase Auth.</div>
-    <div class="muted" style="margin-top:10px">
-      Dica: Authorized domains deve conter <b>tsvalencio-ia.github.io</b>.
-    </div>
+      <aside class="section">
+        <div class="card">
+          <h2>Motoboys</h2>
+          <div id="driversList" class="list"></div>
+        </div>
+
+        <div class="card" id="panelDriver">
+          <div class="cardhead"><h2>Cadastrar/editar motoboy</h2><div class="tools"><button class="gray btn-mini" onclick="togglePanel('panelDriver');return false;">Minimizar</button></div></div>
+          <div class="cardbody">
+            <div class="alert">Crie o usuário primeiro no Firebase Authentication. Depois cole aqui o UID dele.</div>
+          <div class="section">
+            <input id="driverUid" placeholder="UID do usuário no Firebase Auth" />
+            <input id="driverName" placeholder="Nome do motoboy" />
+            <input id="driverPhone" placeholder="Telefone" />
+            <input id="driverPlate" placeholder="Placa da moto" />
+            <button class="ok" id="btnSaveDriver">Salvar motoboy</button>
+          </div>
+        </div>
+
+        <div class="card" id="panelNewDelivery">
+          <div class="cardhead"><h2>Novo pedido/rota</h2><div class="tools"><button class="gray btn-mini" onclick="togglePanel('panelNewDelivery');return false;">Minimizar</button></div></div>
+          <div class="cardbody">
+            <div class="grid">
+            <input id="delCode" placeholder="Pedido nº" />
+            <input id="delCustomer" placeholder="Cliente" />
+          </div>
+          <textarea id="delAddress" class="mt" placeholder="Endereço de entrega"></textarea>
+          <div class="grid mt">
+            <input id="delLat" placeholder="Latitude opcional" />
+            <input id="delLng" placeholder="Longitude opcional" />
+          </div>
+          <select id="delAssignDriver" class="mt"><option value="">(Opcional) Selecionar motoboy agora</option></select>
+          <button class="ok mt" id="btnCreateDelivery">Criar pedido</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Pedidos</h2>
+          <div id="deliveriesList" class="list"></div>
+        </div>
+      </aside>
+    </main>
+
+    <div class="footer" id="footer"></div>
   </div>
-</div>
 
-<div id="app" class="layout" style="display:none">
-  <section class="card">
-    <div class="head">
-      <b>Mapa</b>
-      <span class="chip"><span class="dot warn" id="dotDrivers"></span><span id="driversCount">0</span> motoboys</span>
-    </div>
-    <div id="map"></div>
-  </section>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="assets/js/firebase-config.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
 
-  <aside class="card">
-    <div class="head">
-      <b>Motoboys</b>
-      <span class="muted" id="companyInfo"></span>
-    </div>
-    <div class="body">
-      <div class="row" style="margin-bottom:10px">
-        <button class="btn secondary btn-mini" id="btnToggleDriver" type="button">Minimizar cadastro</button>
-      </div>
-
-      <div id="panelDriver" class="section">
-        <div class="muted">Cadastre o motoboy colando o UID (Firebase Auth).</div>
-        <input id="driverUid" placeholder="UID do motoboy (Auth)" />
-        <input id="driverName" placeholder="Nome do motoboy" />
-        <input id="driverPhone" placeholder="Telefone" />
-        <input id="driverPlate" placeholder="Placa" />
-        <button class="btn" id="btnSaveDriver" type="button">Salvar motoboy</button>
-      </div>
-
-      <div style="height:12px"></div>
-      <div id="driversList" class="list"></div>
-
-      <div class="muted" style="margin-top:12px">
-        Clique num motoboy para centralizar no mapa.
-      </div>
-    </div>
-  </aside>
-</div>
-
-<div class="footer" id="footer">Powered by thIAguinho Soluções Digitais</div>
-
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
-<script src="assets/js/firebase-config.js"></script>
-
-<script>
-(function(){
-  const $ = (id) => document.getElementById(id);
-
-  const cfg = window.PIZZARIA_CONFIG || null;
-  const fbCfg = window.firebaseConfig || null;
-
-  const state = { drivers: {} };
-  const driverMarkers = new Map();
-  let map = null;
-  let auth = null;
-  let db = null;
-  let basePath = null;
-
-  function setDot(id, kind){
-    const el = $(id);
-    el.classList.remove('ok','warn','bad');
-    if(kind) el.classList.add(kind);
-  }
-
-  function msg(text, type){
-    const el = $('loginMsg');
-    el.classList.remove('err','ok');
-    if(type === 'err') el.classList.add('err');
-    if(type === 'ok') el.classList.add('ok');
-    el.textContent = text;
-  }
-
-  function showLogin(){
-    $('loginBox').style.display = 'block';
-    $('app').style.display = 'none';
-  }
-  function showApp(){
-    $('loginBox').style.display = 'none';
-    $('app').style.display = 'grid';
-  }
-
-  function safeInit(){
-    if(!cfg || !fbCfg){
-      msg('Config do Firebase não carregou. Verifique painel-web/assets/js/firebase-config.js.', 'err');
-      return false;
-    }
-    try { firebase.initializeApp(fbCfg); } catch(e) {}
-    try{
-      auth = firebase.auth();
-      db = firebase.database();
-      basePath = `deliveryApp/${cfg.empresaId}`;
-      $('companyInfo').textContent = `Empresa: ${cfg.empresaId}`;
-      $('title').textContent = `${cfg.nomePizzaria || 'Pizzalog'} • Painel Admin`;
-      $('subtitle').textContent = 'GPS em tempo real';
-      $('footer').textContent = cfg.assinatura || 'Powered by thIAguinho Soluções Digitais';
-      return true;
-    }catch(e){
-      msg('Falha ao iniciar Firebase. Tente outra rede (pode bloquear gstatic).', 'err');
-      return false;
-    }
-  }
-
-  function initMap(){
-    if(map) return;
-    map = L.map('map').setView([cfg.baseLat || -23.55052, cfg.baseLng || -46.633308], cfg.baseZoom || 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
-  }
-
-  function isOnline(loc){
-    const offlineMin = Number(cfg.offlineDepoisDeMin || 2);
-    if(!loc || !loc.updatedAt) return false;
-    return (Date.now() - loc.updatedAt) <= offlineMin * 60000;
-  }
-
-  function timeAgo(ms){
-    if(!ms) return '-';
-    const s = Math.floor((Date.now()-ms)/1000);
-    if(s < 60) return `${s}s atrás`;
-    const m = Math.floor(s/60);
-    if(m < 60) return `${m}min atrás`;
-    return `${Math.floor(m/60)}h atrás`;
-  }
-
-  function escapeHtml(v){
-    return String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-  }
-
-  function upsertMarker(uid, d){
-    const loc = d && d.location ? d.location : {};
-    if(typeof loc.lat !== 'number' || typeof loc.lng !== 'number') return;
-
-    const p = d && d.profile ? d.profile : {};
-    const name = p.name || 'MOTOBOY';
-    const plate = p.vehiclePlate || p.plate || '';
-    const online = isOnline(loc);
-
-    const popup = `<b>${escapeHtml(name)}${plate ? ` • ${escapeHtml(plate)}` : ''}</b><br>
-      ${online ? '<span style="color:#86efac;font-weight:900">ONLINE</span>' : '<span style="color:#fca5a5;font-weight:900">OFFLINE</span>'}<br>
-      Último GPS: ${escapeHtml(timeAgo(loc.updatedAt))}`;
-
-    let m = driverMarkers.get(uid);
-    if(!m){
-      m = L.marker([loc.lat, loc.lng]).addTo(map);
-      m.on('click', () => map.setView([loc.lat, loc.lng], 16));
-      driverMarkers.set(uid, m);
-    }else{
-      m.setLatLng([loc.lat, loc.lng]);
-    }
-    m.bindPopup(popup);
-  }
-
-  function render(){
-    const drivers = state.drivers || {};
-    const entries = Object.entries(drivers);
-
-    $('driversCount').textContent = String(entries.length);
-    setDot('dotDrivers', entries.length ? 'ok' : 'warn');
-
-    const list = $('driversList');
-    if(!entries.length){
-      list.innerHTML = '<div class="muted">Nenhum motoboy cadastrado.</div>';
-    } else {
-      list.innerHTML = entries
-        .sort((a,b)=>((b[1]?.location?.updatedAt||0)-(a[1]?.location?.updatedAt||0)))
-        .map(([uid,d])=>{
-          const p = d?.profile || {};
-          const loc = d?.location || {};
-          const name = p.name || uid;
-          const plate = p.vehiclePlate || p.plate || '';
-          const online = isOnline(loc);
-          const badge = online ? 'ok' : 'bad';
-          const badgeTxt = online ? 'ONLINE' : 'OFFLINE';
-
-          return `<div class="item" data-uid="${escapeHtml(uid)}">
-            <div class="item-top">
-              <div>
-                <div class="name">${escapeHtml(name)}${plate?` • ${escapeHtml(plate)}`:''}</div>
-                <div class="muted">UID: <span class="mono">${escapeHtml(uid)}</span></div>
-              </div>
-              <span class="badge ${badge}">${badgeTxt}</span>
-            </div>
-            <div class="muted" style="margin-top:8px">
-              Último GPS: <b>${escapeHtml(timeAgo(loc.updatedAt))}</b><br>
-              Lat/Lng: ${typeof loc.lat==='number'?loc.lat.toFixed(5):'-'} / ${typeof loc.lng==='number'?loc.lng.toFixed(5):'-'}
-            </div>
-          </div>`;
-        }).join('');
-
-      list.querySelectorAll('.item[data-uid]').forEach(el=>{
-        el.addEventListener('click', ()=>{
-          const uid = el.getAttribute('data-uid');
-          const d = state.drivers && state.drivers[uid] ? state.drivers[uid] : null;
-          const loc = d?.location;
-          if(loc && typeof loc.lat === 'number' && typeof loc.lng === 'number'){
-            map.setView([loc.lat, loc.lng], 16);
-            const m = driverMarkers.get(uid);
-            if(m) m.openPopup();
-          }
-        });
-      });
+    // ✅ Minimizar/expandir painéis (sem programar)
+    function togglePanel(id){
+      const el = $(id);
+      if(!el) return;
+      el.classList.toggle('collapsed');
     }
 
-    initMap();
-    for(const [uid, d] of entries){
-      upsertMarker(uid, d);
-    }
-    for(const uid of Array.from(driverMarkers.keys())){
-      if(!drivers[uid]){
-        driverMarkers.get(uid).remove();
-        driverMarkers.delete(uid);
+    // ✅ Boot seguro: nunca deixa o botão "Entrar" ficar mudo
+    function showBoot(msg){
+      const el = $('loginMsg');
+      if(el){
+        el.textContent = msg;
+        el.style.color = '#fca5a5';
+      }else{
+        alert(msg);
       }
     }
-  }
 
-  function listen(){
-    setDot('dotDB','warn');
-    db.ref(`${basePath}/drivers`).on('value', snap=>{
-      state.drivers = snap.val() || {};
-      setDot('dotDB','ok');
-      render();
-    });
-  }
+    const cfg = window.PIZZARIA_CONFIG || null;
+    const fbCfg = window.firebaseConfig || null;
 
-  function toggleCadastro(){
-    const panel = $('panelDriver');
-    const btn = $('btnToggleDriver');
-    const hidden = panel.classList.toggle('collapsed');
-    btn.textContent = hidden ? 'Expandir cadastro' : 'Minimizar cadastro';
-  }
-
-  async function saveDriver(){
-    const uid = $('driverUid').value.trim();
-    if(!uid) return alert('Cole o UID do motoboy.');
-    const payload = {
-      name: $('driverName').value.trim() || 'Motoboy',
-      phone: $('driverPhone').value.trim(),
-      vehiclePlate: $('driverPlate').value.trim(),
-      active: true,
-      updatedAt: Date.now()
-    };
-    await db.ref(`${basePath}/drivers/${uid}/profile`).update(payload);
-    $('driverUid').value=''; $('driverName').value=''; $('driverPhone').value=''; $('driverPlate').value='';
-    alert('Motoboy salvo.');
-  }
-
-  // Buttons
-  $('btnToggleDriver').addEventListener('click', toggleCadastro);
-  $('btnSaveDriver').addEventListener('click', ()=> saveDriver().catch(e=>alert(e?.message||String(e))));
-  $('btnRefresh').addEventListener('click', ()=> render());
-  $('btnLogout').addEventListener('click', ()=> auth && auth.signOut());
-
-  $('btnLogin').addEventListener('click', async ()=>{
-    msg('Entrando...', null);
-    setDot('dotAuth','warn');
-    try{
-      if(!safeInit()) return;
-      await auth.signInWithEmailAndPassword(($('loginEmail').value||'').trim(), $('loginPass').value||'');
-    }catch(e){
-      msg('Erro no login: ' + (e?.message || String(e)), 'err');
-      setDot('dotAuth','bad');
+    // coloca textos básicos mesmo sem firebase
+    if(cfg){
+      const t = $('titulo'); if(t) t.textContent = `Pizzalog • GPS`;
+      const st = $('subtitulo'); if(st) st.textContent = `Empresa ID: ${cfg.empresaId} • prazo normal ${cfg.promessaNormalMin} min`;
+      const ft = $('footer'); if(ft) ft.textContent = cfg.assinatura || '';
     }
-  });
 
-  // Boot
-  showLogin();
-  setDot('dotAuth','bad');
-  setDot('dotDB','warn');
-  if(!cfg || !fbCfg){
-    msg('Config do Firebase não carregou. Verifique painel-web/assets/js/firebase-config.js.', 'err');
-    return;
-  }
-  safeInit();
-  auth.onAuthStateChanged(async (user)=>{
-    if(!user){
-      showLogin();
-      setDot('dotAuth','bad');
-      return;
+    // Firebase init (tenta, mas não trava a página)
+    let auth = null;
+    let db = null;
+    let basePath = null;
+
+    function initFirebase(){
+      if(typeof firebase === 'undefined') return false;
+      if(!fbCfg) return false;
+      try { firebase.initializeApp(fbCfg); } catch(e) {}
+      try{
+        auth = firebase.auth();
+        db = firebase.database();
+        basePath = `deliveryApp/${cfg?.empresaId || 'pizzalog'}`;
+        return true;
+      }catch(e){
+        return false;
+      }
     }
-    try{
-      const roleSnap = await db.ref(`${basePath}/roles/${user.uid}`).get();
-      if(roleSnap.val() !== 'admin'){
-        msg('Este usuário não é admin nesta empresa.', 'err');
-        await auth.signOut();
-        setDot('dotAuth','bad');
+
+    // Armando clique do login ANTES (sempre responde)
+    const btnLogin = document.getElementById('btnLogin');
+    if(btnLogin){
+      btnLogin.onclick = async () => {
+        const msg = $('loginMsg');
+        if(msg){ msg.style.color = '#9ca3af'; msg.textContent = 'Entrando...'; }
+        try{
+          if(!cfg || !fbCfg) throw new Error('Config do Firebase não carregou. Confira painel-web/assets/js/firebase-config.js.');
+          if(!initFirebase()) throw new Error('Firebase não carregou (rede pode bloquear www.gstatic.com). Teste 4G ou outra rede.');
+          await auth.signInWithEmailAndPassword(($('loginEmail')?.value||'').trim(), $('loginPass')?.value||'');
+        }catch(e){
+          if(msg){ msg.style.color = '#fca5a5'; msg.textContent = (e?.message||String(e)); }
+        }
+      };
+    }
+
+    // Depois do DOM pronto, tenta iniciar firebase para listeners
+    if(cfg && fbCfg){
+      initFirebase();
+    }
+    let map, baseMarker;
+    const driverMarkers = new Map();
+    const deliveryMarkers = new Map();
+    let state = { drivers:{}, deliveries:{}, roles:{} };
+
+    function fillCreateDriverSelect(){
+      const sel = $('delAssignDriver');
+      if(!sel) return;
+      const prev = sel.value || '';
+      const drivers = state.drivers || {};
+      sel.innerHTML = '<option value="">(Opcional) Selecionar motoboy agora</option>';
+      Object.keys(drivers).sort().forEach(uid=>{
+        const d = drivers[uid]||{};
+        const name = d?.profile?.name || 'MOTOBOY';
+        const plate = d?.profile?.vehiclePlate ? ` • ${d.profile.vehiclePlate}` : (d?.profile?.plate ? ` • ${d.profile.plate}` : '');
+        const active = !!d?.profile?.active;
+        const opt = document.createElement('option');
+        opt.value = uid;
+        opt.textContent = `${name}${plate}${active?'':' (INATIVO)'}`;
+        sel.appendChild(opt);
+      });
+      sel.value = prev;
+    }
+    $('btnLogout').onclick = () => auth.signOut();
+    $('btnRefresh').onclick = () => renderAll();
+
+    auth.onAuthStateChanged(async user => {
+      if (!user) {
+        $('loginBox').classList.remove('hidden');
+        $('app').classList.add('hidden');
         return;
       }
-    }catch(e){
-      msg('Erro ao validar admin: ' + (e?.message || String(e)), 'err');
-      setDot('dotAuth','bad');
-      return;
-    }
-    msg('Logado.', 'ok');
-    setDot('dotAuth','ok');
-    showApp();
-    initMap();
-    listen();
-  });
+      const roleSnap = await db.ref(`${basePath}/roles/${user.uid}`).get();
+      if (roleSnap.val() !== 'admin') {
+        $('loginMsg').innerHTML = `<span class="dangerText">Este usuário não está como admin em /${basePath}/roles/${user.uid}</span>`;
+        await auth.signOut();
+        return;
+      }
+      $('loginBox').classList.add('hidden');
+      $('app').classList.remove('hidden');
+      initMap();
+      listenData();
+    });
 
-})();
+    function initMap(){
+      if(map) return;
+      map = L.map('map').setView([cfg.baseLat, cfg.baseLng], 14);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap'
+      }).addTo(map);
+      baseMarker = L.marker([cfg.baseLat, cfg.baseLng]).addTo(map).bindPopup(`<b>${cfg.nomePizzaria}</b><br>Base da pizzaria`);
+    }
+
+    function listenData(){
+      // Lê nós separadamente (compatível com rules mais restritas)
+      db.ref(`${basePath}/drivers`).on('value', snap => {
+        state.drivers = snap.val() || {};
+        fillCreateDriverSelect();
+        renderAll();
+      }, err => console.error('drivers read error', err));
+
+      db.ref(`${basePath}/deliveries`).on('value', snap => {
+        state.deliveries = snap.val() || {};
+        renderAll();
+      }, err => console.error('deliveries read error', err));
+
+      db.ref(`${basePath}/roles`).on('value', snap => {
+        state.roles = snap.val() || {};
+      }, err => console.error('roles read error', err));
+    }
+      for(const [uid,d] of Object.entries(drivers)){
+        const loc = d.location || {}; if(!loc.lat || !loc.lng) continue;
+        const name = (d.profile||{}).name || uid;
+        const html = `<b>${escapeHtml(name)}</b><br>${isOnline(loc,d.status||{})?'Online':'Offline'}<br>${timeAgo(loc.updatedAt)}`;
+        if(driverMarkers.has(uid)) driverMarkers.get(uid).setLatLng([loc.lat, loc.lng]).setPopupContent(html);
+        else driverMarkers.set(uid, L.marker([loc.lat, loc.lng]).addTo(map).bindPopup(html));
+      }
+      const deliveries = state.deliveries || {};
+      for(const id of Array.from(deliveryMarkers.keys())){
+        const d = deliveries[id];
+        if(!d || !d.lat || !d.lng || d.status === 'entregue'){
+          map.removeLayer(deliveryMarkers.get(id)); deliveryMarkers.delete(id);
+        }
+      }
+      for(const [id,d] of Object.entries(deliveries)){
+        if(!d.lat || !d.lng || d.status === 'entregue') continue;
+        const html = `<b>Pedido ${escapeHtml(d.code||id)}</b><br>${escapeHtml(d.customer||'')}<br>${escapeHtml(d.address||'')}`;
+        if(deliveryMarkers.has(id)) deliveryMarkers.get(id).setLatLng([d.lat,d.lng]).setPopupContent(html);
+        else deliveryMarkers.set(id, L.circleMarker([d.lat,d.lng],{radius:8}).addTo(map).bindPopup(html));
+      }
+    }
+
+    function renderKpis(){
+      const drivers = Object.values(state.drivers||{});
+      const deliveries = Object.values(state.deliveries||{});
+      $('kpiOnline').textContent = drivers.filter(d=>isOnline(d.location||{},d.status||{})).length;
+      $('kpiEntrega').textContent = deliveries.filter(d=>d.status==='em_entrega').length;
+      $('kpiAguardando').textContent = deliveries.filter(d=>d.status==='aguardando').length;
+      $('kpiAlerta').textContent = deliveries.filter(d=>d.status==='aguardando' && Math.floor((Date.now()-(d.createdAt||Date.now()))/60000)>=cfg.alertaSemMotoboyMin).length;
+    }
+
+    function isOnline(loc, st){
+      if(!loc.updatedAt || st.trackingActive === false) return false;
+      return (Date.now() - loc.updatedAt) <= cfg.offlineDepoisDeMin * 60000;
+    }
+    function estimateReturn(lat,lng,speedMps){
+      const km = haversineKm(lat,lng,cfg.baseLat,cfg.baseLng);
+      const kmh = speedMps && speedMps>2 ? speedMps*3.6 : 32;
+      const min = Math.max(2, Math.ceil((km/kmh)*60));
+      return { km, min, text: `${min} min (${km.toFixed(1)} km)` };
+    }
+    function haversineKm(lat1,lon1,lat2,lon2){
+      const R=6371, dLat=(lat2-lat1)*Math.PI/180, dLon=(lon2-lon1)*Math.PI/180;
+      const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+      return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    }
+    function fmtTime(ms){return ms ? new Date(ms).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '-'}
+    function timeAgo(ms){
+      if(!ms) return '-'; const s=Math.floor((Date.now()-ms)/1000); if(s<60) return `${s}s atrás`; const m=Math.floor(s/60); if(m<60) return `${m}min atrás`; return `${Math.floor(m/60)}h atrás`;
+    }
+    function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',''':'&#39;','"':'&quot;'}[c]))}
+  
 </script>
 </body>
 </html>
