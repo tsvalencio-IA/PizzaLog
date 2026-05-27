@@ -108,6 +108,8 @@
     .card .head b{font-size:13px; letter-spacing:.02em}
     .card .body{padding:12px}
     .muted{color:var(--muted); font-size:12px; line-height:1.45}
+    .muted.err{color:#fca5a5;font-weight:900}
+    .muted.ok{color:#86efac;font-weight:900}
 
     .login{
       max-width: 560px;
@@ -278,6 +280,25 @@
 
     <div class="card">
       <div class="head">
+        <b>Base da pizzaria</b>
+        <button class="btn secondary mini" id="btnCenterBase" type="button">Centralizar</button>
+      </div>
+      <div class="body section">
+        <input id="baseAddress" placeholder="Endereco da pizzaria" />
+        <div class="grid">
+          <input id="baseLat" placeholder="Latitude da base" />
+          <input id="baseLng" placeholder="Longitude da base" />
+        </div>
+        <div class="row">
+          <button class="btn secondary mini" id="btnGeocodeBase" type="button">Buscar no mapa</button>
+          <button class="btn mini" id="btnSaveBase" type="button">Salvar base</button>
+        </div>
+        <div class="muted" id="baseMsg"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="head">
         <b>Pedidos (opcional)</b>
         <button class="btn secondary mini" id="btnToggleDelivery" type="button">Minimizar</button>
       </div>
@@ -323,7 +344,7 @@
   const cfg = window.PIZZARIA_CONFIG || null;
   const fbCfg = window.firebaseConfig || null;
 
-  const state = { drivers: {}, deliveries: {}, roles: {} };
+  const state = { drivers: {}, deliveries: {}, roles: {}, config: {} };
   const driverMarkers = new Map();
   const deliveryMarkers = new Map();
 
@@ -331,6 +352,7 @@
   let auth = null;
   let db = null;
   let basePath = null;
+  let baseMarker = null;
 
   function setDot(id, kind){
     const el = $(id);
@@ -357,6 +379,39 @@
   function escapeHtml(v){
     return String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
   }
+  function appConfig(){
+    return Object.assign({}, cfg || {}, state.config || {});
+  }
+  function parseCoord(v){
+    const n = Number(String(v ?? '').trim().replace(',', '.'));
+    return Number.isFinite(n) ? n : null;
+  }
+  function baseCoords(){
+    const activeCfg = appConfig();
+    const lat = parseCoord(activeCfg.baseLat);
+    const lng = parseCoord(activeCfg.baseLng);
+    return lat === null || lng === null ? null : { lat, lng };
+  }
+  function syncChrome(){
+    const activeCfg = appConfig();
+    $('companyInfo').textContent = `Empresa: ${activeCfg.empresaId || cfg.empresaId}`;
+    $('title').textContent = `${activeCfg.nomePizzaria || 'Pizzalog'} - Painel Admin (Pro)`;
+    $('subtitle').textContent = 'GPS em tempo real - Pedidos (opcional)';
+    $('footer').textContent = activeCfg.assinatura || 'Powered by thIAguinho Solucoes Digitais';
+  }
+  function fillBaseForm(){
+    const activeCfg = appConfig();
+    $('baseAddress').value = activeCfg.enderecoBase || '';
+    $('baseLat').value = baseCoords()?.lat ?? '';
+    $('baseLng').value = baseCoords()?.lng ?? '';
+  }
+  function setBaseMsg(text, type){
+    const el = $('baseMsg');
+    el.classList.remove('err','ok');
+    if(type === 'err') el.classList.add('err');
+    if(type === 'ok') el.classList.add('ok');
+    el.textContent = text || '';
+  }
   function timeAgo(ms){
     if(!ms) return '-';
     const s = Math.floor((Date.now()-ms)/1000);
@@ -380,10 +435,8 @@
       auth = firebase.auth();
       db = firebase.database();
       basePath = `deliveryApp/${cfg.empresaId}`;
-      $('companyInfo').textContent = `Empresa: ${cfg.empresaId}`;
-      $('title').textContent = `${cfg.nomePizzaria || 'Pizzalog'} • Painel Admin (Pro)`;
-      $('subtitle').textContent = 'GPS em tempo real • Pedidos (opcional)';
-      $('footer').textContent = cfg.assinatura || 'Powered by thIAguinho Soluções Digitais';
+      syncChrome();
+      fillBaseForm();
       return true;
     }catch(e){
       msg('Falha ao iniciar Firebase (JS). Veja Console.', 'err');
@@ -394,8 +447,25 @@
 
   function initMap(){
     if(map) return;
-    map = L.map('map').setView([cfg.baseLat || -23.55052, cfg.baseLng || -46.633308], cfg.baseZoom || 13);
+    const base = baseCoords() || { lat: -23.55052, lng: -46.633308 };
+    map = L.map('map').setView([base.lat, base.lng], appConfig().baseZoom || 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+    upsertBaseMarker();
+  }
+
+  function upsertBaseMarker(){
+    if(!map) return;
+    const base = baseCoords();
+    if(!base) return;
+
+    const activeCfg = appConfig();
+    const popup = `<b>${escapeHtml(activeCfg.nomePizzaria || 'Base da pizzaria')}</b><br>${escapeHtml(activeCfg.enderecoBase || 'Base operacional')}`;
+    if(!baseMarker){
+      baseMarker = L.marker([base.lat, base.lng]).addTo(map);
+    }else{
+      baseMarker.setLatLng([base.lat, base.lng]);
+    }
+    baseMarker.bindPopup(popup);
   }
 
   function isOnline(loc, st){
@@ -406,7 +476,9 @@
   }
 
   function estimateReturn(lat,lng,speedMps){
-    const km = haversineKm(lat,lng,cfg.baseLat,cfg.baseLng);
+    const base = baseCoords();
+    if(!base) return null;
+    const km = haversineKm(lat,lng,base.lat,base.lng);
     const kmh = speedMps && speedMps>2 ? speedMps*3.6 : 32;
     const min = Math.max(2, Math.ceil((km/kmh)*60));
     return { km, min, text: `${min} min (${km.toFixed(1)} km)` };
@@ -521,6 +593,7 @@
     const el = $('deliveriesList');
     const deliveries = state.deliveries || {};
     const drivers = state.drivers || {};
+    const activeCfg = appConfig();
     const active = Object.entries(deliveries).filter(([_,d]) => d?.status !== 'entregue')
       .sort((a,b)=>((a[1]?.createdAt||0)-(b[1]?.createdAt||0)));
 
@@ -537,7 +610,7 @@
 
     el.innerHTML = active.map(([id,d])=>{
       const elapsedMin = Math.floor((Date.now() - (d.createdAt||Date.now()))/60000);
-      const alert = d.status === 'aguardando' && cfg.alertaSemMotoboyMin && elapsedMin >= cfg.alertaSemMotoboyMin;
+      const alert = d.status === 'aguardando' && activeCfg.alertaSemMotoboyMin && elapsedMin >= activeCfg.alertaSemMotoboyMin;
       const driverName = d.driverId && drivers[d.driverId] ? (drivers[d.driverId].profile||{}).name : '';
 
       let badge = 'warn';
@@ -557,7 +630,7 @@
         <div class="muted" style="margin-top:8px">
           Criado há <b>${elapsedMin} min</b> • Prazo normal: <b>${fmtTime(d.promisedNormalAt)}</b> • Estendido: <b>${fmtTime(d.promisedExtendedAt)}</b><br>
           Motoboy: <b>${escapeHtml(driverName || 'não definido')}</b>
-          ${alert ? `<div class="alert" style="margin-top:8px">Pedido passou de ${cfg.alertaSemMotoboyMin} min sem motoboy.</div>` : ''}
+          ${alert ? `<div class="alert" style="margin-top:8px">Pedido passou de ${activeCfg.alertaSemMotoboyMin} min sem motoboy.</div>` : ''}
         </div>
         <div class="row" style="margin-top:10px">
           <select id="sel_${escapeHtml(id)}">
@@ -573,6 +646,7 @@
 
   function renderMap(){
     if(!map) return;
+    upsertBaseMarker();
 
     // drivers
     for(const uid of Array.from(driverMarkers.keys())){
@@ -622,16 +696,30 @@
       state.drivers = snap.val() || {};
       setDot('dotDB','ok');
       renderAll();
-    }, err => console.error('drivers read error', err));
+    }, err => {
+      setDot('dotDB','bad');
+      $('driversList').innerHTML = `<div class="alert">Erro ao ler motoboys em /${escapeHtml(basePath)}/drivers: ${escapeHtml(err?.message || err)}</div>`;
+      console.error('drivers read error', err);
+    });
 
     db.ref(`${basePath}/deliveries`).on('value', snap => {
       state.deliveries = snap.val() || {};
       renderAll();
-    }, err => console.error('deliveries read error', err));
+    }, err => {
+      $('deliveriesList').innerHTML = `<div class="alert">Erro ao ler pedidos em /${escapeHtml(basePath)}/deliveries: ${escapeHtml(err?.message || err)}</div>`;
+      console.error('deliveries read error', err);
+    });
 
     db.ref(`${basePath}/roles`).on('value', snap => {
       state.roles = snap.val() || {};
     }, err => console.error('roles read error', err));
+
+    db.ref(`${basePath}/config`).on('value', snap => {
+      state.config = snap.val() || {};
+      syncChrome();
+      fillBaseForm();
+      renderAll();
+    }, err => console.error('config read error', err));
   }
 
   // UI toggles
@@ -676,14 +764,15 @@
 
   async function createDelivery(){
     const code = $('delCode').value.trim() || ('PED-' + Date.now());
+    const activeCfg = appConfig();
     const payload = {
       code,
       customer: $('delCustomer').value.trim(),
       address: $('delAddress').value.trim(),
       status: 'aguardando',
       createdAt: Date.now(),
-      promisedNormalAt: Date.now() + (Number(cfg.promessaNormalMin||30) * 60000),
-      promisedExtendedAt: Date.now() + (Number(cfg.promessaEstendidaMin||40) * 60000)
+      promisedNormalAt: Date.now() + (Number(activeCfg.promessaNormalMin||30) * 60000),
+      promisedExtendedAt: Date.now() + (Number(activeCfg.promessaEstendidaMin||40) * 60000)
     };
 
     const preDriver = $('delAssignDriver')?.value || '';
@@ -707,6 +796,80 @@
       $('deliveryMsg').textContent = 'Erro: ' + msgText;
       alert('Erro ao criar pedido: ' + msgText);
       console.error(e);
+    }
+  }
+
+  async function geocodeBaseAddress(){
+    const address = $('baseAddress').value.trim();
+    if(!address) { alert('Informe o endereco da pizzaria.'); return; }
+
+    setBaseMsg('Buscando coordenadas...');
+    try{
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=${encodeURIComponent(address)}`;
+      const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if(!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const data = await response.json();
+      if(!Array.isArray(data) || !data.length) throw new Error('Endereco nao encontrado.');
+
+      const lat = Number(data[0].lat);
+      const lng = Number(data[0].lon);
+      if(!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error('Coordenadas invalidas.');
+
+      $('baseLat').value = lat.toFixed(6);
+      $('baseLng').value = lng.toFixed(6);
+      state.config = Object.assign({}, state.config, { enderecoBase: address, baseLat: lat, baseLng: lng });
+      setBaseMsg('Coordenadas encontradas. Confira e salve a base.', 'ok');
+      syncChrome();
+      upsertBaseMarker();
+      if(map) map.setView([lat, lng], 16);
+    }catch(e){
+      const msgText = e?.message || String(e);
+      setBaseMsg('Erro ao buscar endereco: ' + msgText, 'err');
+      alert('Erro ao buscar endereco: ' + msgText + '. Voce pode preencher latitude e longitude manualmente.');
+      console.error(e);
+    }
+  }
+
+  async function saveBaseConfig(){
+    const address = $('baseAddress').value.trim();
+    const lat = parseCoord($('baseLat').value);
+    const lng = parseCoord($('baseLng').value);
+
+    if(lat === null || lng === null){
+      alert('Informe latitude e longitude validas da pizzaria.');
+      return;
+    }
+
+    const payload = {
+      enderecoBase: address,
+      baseLat: lat,
+      baseLng: lng,
+      updatedAt: Date.now()
+    };
+
+    setBaseMsg('Salvando base...');
+    try{
+      await db.ref(`${basePath}/config`).update(payload);
+      state.config = Object.assign({}, state.config, payload);
+      setBaseMsg('Base salva.', 'ok');
+      upsertBaseMarker();
+      if(map) map.setView([lat, lng], 16);
+    }catch(e){
+      const msgText = e?.message || String(e);
+      setBaseMsg('Erro ao salvar base: ' + msgText, 'err');
+      alert('Erro ao salvar base: ' + msgText);
+      console.error(e);
+    }
+  }
+
+  function centerBase(){
+    const base = baseCoords();
+    if(!base) { alert('Cadastre a latitude e longitude da base da pizzaria.'); return; }
+    if(map) {
+      map.setView([base.lat, base.lng], 16);
+      upsertBaseMarker();
+      if(baseMarker) baseMarker.openPopup();
     }
   }
 
@@ -744,6 +907,9 @@
   $('btnToggleDriver').addEventListener('click', toggleCadastro);
   $('btnToggleDelivery').addEventListener('click', toggleDelivery);
   $('btnSaveDriver').addEventListener('click', ()=> saveDriver());
+  $('btnGeocodeBase').addEventListener('click', ()=> geocodeBaseAddress());
+  $('btnSaveBase').addEventListener('click', ()=> saveBaseConfig());
+  $('btnCenterBase').addEventListener('click', ()=> centerBase());
   $('btnCreateDelivery').addEventListener('click', ()=> createDelivery());
   $('btnRefresh').addEventListener('click', ()=> renderAll());
   $('btnLogout').addEventListener('click', ()=> auth && auth.signOut());

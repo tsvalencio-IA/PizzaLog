@@ -3,6 +3,8 @@
     "deliveryApp": {
       "$empresaId": {
         "roles": {
+          ".read": "auth != null && root.child('deliveryApp').child($empresaId).child('roles').child(auth.uid).val() === 'admin'",
+          ".write": "auth != null && root.child('deliveryApp').child($empresaId).child('roles').child(auth.uid).val() === 'admin'",
           "$uid": {
             ".read": "auth != null && root.child('deliveryApp').child($empresaId).child('roles').child(auth.uid).val() === 'admin'",
             ".write": "auth != null && root.child('deliveryApp').child($empresaId).child('roles').child(auth.uid).val() === 'admin'",
@@ -10,6 +12,7 @@
           }
         },
         "drivers": {
+          ".read": "auth != null && root.child('deliveryApp').child($empresaId).child('roles').child(auth.uid).val() === 'admin'",
           "$driverUid": {
             ".read": "auth != null && (root.child('deliveryApp').child($empresaId).child('roles').child(auth.uid).val() === 'admin' || auth.uid === $driverUid)",
             "profile": {
@@ -25,25 +28,27 @@
           }
         },
         "deliveries": {
+          ".read": "auth != null && (root.child('deliveryApp').child($empresaId).child('roles').child(auth.uid).val() === 'admin' || ((query.orderByChild === 'driverId' || query.orderByChild === 'driverUid') && query.equalTo === auth.uid))",
           ".indexOn": [
             "driverId",
+            "driverUid",
             "status",
             "createdAt"
           ],
           "$deliveryId": {
-            ".read": "auth != null && (root.child('deliveryApp').child($empresaId).child('roles').child(auth.uid).val() === 'admin' || (query.orderByChild === 'driverId' && query.equalTo === auth.uid))",
+            ".read": "auth != null && (root.child('deliveryApp').child($empresaId).child('roles').child(auth.uid).val() === 'admin' || data.child('driverId').val() === auth.uid || data.child('driverUid').val() === auth.uid)",
             ".write": "auth != null && root.child('deliveryApp').child($empresaId).child('roles').child(auth.uid).val() === 'admin'",
             "status": {
-              ".write": "auth != null && (root.child('deliveryApp').child($empresaId).child('roles').child(auth.uid).val() === 'admin' || data.parent().child('driverId').val() === auth.uid)"
+              ".write": "auth != null && (root.child('deliveryApp').child($empresaId).child('roles').child(auth.uid).val() === 'admin' || data.parent().child('driverId').val() === auth.uid || data.parent().child('driverUid').val() === auth.uid)"
             },
             "relato": {
-              ".write": "auth != null && (root.child('deliveryApp').child($empresaId).child('roles').child(auth.uid).val() === 'admin' || data.parent().child('driverId').val() === auth.uid)"
+              ".write": "auth != null && (root.child('deliveryApp').child($empresaId).child('roles').child(auth.uid).val() === 'admin' || data.parent().child('driverId').val() === auth.uid || data.parent().child('driverUid').val() === auth.uid)"
             },
             "updatedAt": {
-              ".write": "auth != null && (root.child('deliveryApp').child($empresaId).child('roles').child(auth.uid).val() === 'admin' || data.parent().child('driverId').val() === auth.uid)"
+              ".write": "auth != null && (root.child('deliveryApp').child($empresaId).child('roles').child(auth.uid).val() === 'admin' || data.parent().child('driverId').val() === auth.uid || data.parent().child('driverUid').val() === auth.uid)"
             },
             "deliveredAt": {
-              ".write": "auth != null && (root.child('deliveryApp').child($empresaId).child('roles').child(auth.uid).val() === 'admin' || data.parent().child('driverId').val() === auth.uid)"
+              ".write": "auth != null && (root.child('deliveryApp').child($empresaId).child('roles').child(auth.uid).val() === 'admin' || data.parent().child('driverId').val() === auth.uid || data.parent().child('driverUid').val() === auth.uid)"
             }
           }
         },

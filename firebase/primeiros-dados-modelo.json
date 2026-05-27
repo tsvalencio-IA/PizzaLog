@@ -3,6 +3,9 @@
     "pizzaria_modelo": {
       "config": {
         "nomePizzaria": "Pizzaria Modelo",
+        "enderecoBase": "Rua da pizzaria, 123",
+        "baseLat": -20.8126,
+        "baseLng": -49.3758,
         "promessaNormalMin": 30,
         "alertaSemMotoboyMin": 20,
         "promessaEstendidaMin": 40,

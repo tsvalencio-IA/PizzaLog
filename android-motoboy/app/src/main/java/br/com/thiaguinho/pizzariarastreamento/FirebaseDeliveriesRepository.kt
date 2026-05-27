@@ -103,12 +103,13 @@ val json = merged
         val statusUrl = "$baseUrl/deliveryApp/$empresa/deliveries/$id/status.json?auth=${Uri.encode(session.idToken)}"
         Network.putRaw(statusUrl, JSONObject.quote(newStatus))
 
-        val meta = JSONObject()
-            .put("updatedAt", System.currentTimeMillis())
-        if (!note.isNullOrBlank()) meta.put("note", note)
+        val updatedAtUrl = "$baseUrl/deliveryApp/$empresa/deliveries/$id/updatedAt.json?auth=${Uri.encode(session.idToken)}"
+        Network.putRaw(updatedAtUrl, System.currentTimeMillis().toString())
 
-        val metaUrl = "$baseUrl/deliveryApp/$empresa/deliveries/$id/lastUpdate.json?auth=${Uri.encode(session.idToken)}"
-        Network.putJson(metaUrl, meta)
+        if (!note.isNullOrBlank()) {
+            val relatoUrl = "$baseUrl/deliveryApp/$empresa/deliveries/$id/relato.json?auth=${Uri.encode(session.idToken)}"
+            Network.putRaw(relatoUrl, JSONObject.quote(note))
+        }
     }
 
     private fun cleanDatabaseUrl(): String {
